@@ -1,0 +1,16 @@
+language: go
+go:
+  - "1.10.x"
+
+script:
+  - make
+
+deploy:
+  provider: releases
+  api_key:
+    secure: g1O0+TNjAEsWo3ZMl8rKk4XeObhiCnk1cXHjGsNMuRjF/1pIekzqYVbHahWH057GcHdeWIBENs1m/JHQKfHhx911OEcq8hB3wW8EuiT03bEDHOoIrW+MlGVdDsRdmD9ruH6l44Qlbs4+MIdjimxsBVLNIXpZXvmeePB0P/boOF8CpYhwRNoHVDaEpQhIQy//+9XZ9fS3PcU9Y8E52KSiVaqBppxP+mGEcPf90j/DApZ40VTIDsqYxXrBw6hvejY5e2QCwTyp/NRhdMQEc7pP+ZmZe1ytFRTefBhwXvke6Pv6rKgyA+XO3bRqwiUdHkjBZIZUuGmCnvvjGVdH3h/R7iITBcMNgR7I5Hm7M3ICPMZsWdnD5jfq1/wERABA5rxQ54a4u4eVu4Vb/46Ff0hM4+hKiz1nD2sheqbYNkpbIMX8WjmkN3ooDR79EMzwZ/PFCRvEKadOhDaA5lDlt4QJAx7c7NWAR+QPfB711ZIyKXN3TF98n5Klw+cNxsmzmKAA390zMGT9XVNDp6QnOGUHzjqnHinJgeyu0aacgc+OxdUORhqmMbpjL9H62jD6xfjeE3snwsJUgOq8tpi4t/JZulCiUmhXnn8StBNsXeK5/VboH1h6IdnfYdZyYpBQJHZfVTSTWQlPMtgBaLhsyBsqohrGuZCl/lbRSXLNbjkr1yA=
+  file: "./build/s3get"
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: bsycorp/s3get
