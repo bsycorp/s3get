@@ -22,6 +22,7 @@ import (
 
     "fmt"
     "os"
+    "crypto/sha1"
     "crypto/sha256"
     "encoding/hex"
     "io"
@@ -35,8 +36,8 @@ import (
 //    go run s3_download_object.go BUCKET ITEM
 func main() {
     if len(os.Args) < 3 {
-        exitErrorf("Bucket and item names required\nUsage: %s bucket_name item_name",
-            os.Args[0])
+        exitErrorf("Bucket and item names required\nUsage: %s bucket_name item_name\n       %s bucket_name item_name sha256\n       %s bucket_name item_name version_id sha256",
+            os.Args[0],os.Args[0],os.Args[0])
     }
 
     bucket := os.Args[1]
@@ -45,10 +46,31 @@ func main() {
     outputItem := filepath.Base(item)
     itemTmp := outputItem + ".unconfirmed"
     itemExpectedHash := ""
-    if len(os.Args) > 3 {
+    if len(os.Args) == 4 {
         itemExpectedHash = os.Args[3]
     }
-    
+
+    versionId := ""
+    if len(os.Args) == 5 {
+        versionId = os.Args[3]
+        itemExpectedHash = os.Args[4]
+    }
+
+    // setup getObject obj
+    getObjectInput := &s3.GetObjectInput{
+        Bucket: aws.String(bucket),
+        Key:    aws.String(item),
+    }
+
+    if versionId != "" {
+        getObjectInput = &s3.GetObjectInput{
+            Bucket: aws.String(bucket),
+            Key:    aws.String(item),
+            VersionId:    aws.String(versionId),
+        }
+    }
+
+    // open files for writing
     file, err := os.Create(outputItem)
     if err != nil {
         exitErrorf("Unable to open file %q, %v", err)
@@ -72,11 +94,7 @@ func main() {
 
     downloader := s3manager.NewDownloader(sess)
 
-    numBytes, err := downloader.Download(fileTmp,
-        &s3.GetObjectInput{
-            Bucket: aws.String(bucket),
-            Key:    aws.String(item),
-        })
+    numBytes, err := downloader.Download(fileTmp, getObjectInput)
     if err != nil {
         exitErrorf("Unable to download item %q, %v", item, err)
     }
@@ -85,11 +103,24 @@ func main() {
     
     //downloaded, if have has, check hash
     if itemExpectedHash != "" {
-        h := sha256.New()
-        if _, err := io.Copy(h, fileTmp); err != nil {
-            exitErrorf("Error hashing file: %x", err)
+        fileHash := ""
+
+        if len(itemExpectedHash) == 64 {
+            h := sha256.New()
+            if _, err := io.Copy(h, fileTmp); err != nil {
+                exitErrorf("Error hashing file: %x", err)
+            }
+            fileHash = hex.EncodeToString(h.Sum(nil))
+
+        } else if len(itemExpectedHash) == 40 {
+            h := sha1.New()
+            if _, err := io.Copy(h, fileTmp); err != nil {
+                exitErrorf("Error hashing file: %x", err)
+            }
+            fileHash = hex.EncodeToString(h.Sum(nil))
+        } else {
+            exitErrorf("Invalid hash specified: %s", itemExpectedHash)
         }
-        fileHash := hex.EncodeToString(h.Sum(nil))
         
         if fileHash == itemExpectedHash {
             fmt.Println("Downloaded hash is correct: ", fileHash)
@@ -118,5 +149,3 @@ func exitErrorf(msg string, args ...interface{}) {
     fmt.Fprintf(os.Stderr, msg+"\n", args...)
     os.Exit(1)
 }
-
-
