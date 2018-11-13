@@ -28,6 +28,8 @@ import (
     "io"
     "path/filepath"
     "strconv"
+    "crypto/tls"
+    "net/http"
 )
 
 // Downloads an item from an S3 Bucket in the region configured in the shared config
@@ -88,16 +90,22 @@ func main() {
        awsRegion = os.Getenv("AWS_REGION")
     }
 
-    awsDisableSSL := false
-    if os.Getenv("AWS_DISABLE_SSL") != "" {
-        awsDisableSSL, _ = strconv.ParseBool(os.Getenv("AWS_DISABLE_SSL"))
+    awsConfig := &aws.Config{
+        Region: aws.String(awsRegion),
+    }
+
+    //override http client with SSL ignoring tls config if specified
+    if os.Getenv("AWS_NO_VERIFY_SSL") != "" {
+        awsNoVerifySSL, _ := strconv.ParseBool(os.Getenv("AWS_NO_VERIFY_SSL"))
+        if awsNoVerifySSL {
+            acceptAllCerts := &tls.Config{InsecureSkipVerify: true}
+            tr := &http.Transport{TLSClientConfig: acceptAllCerts}
+            awsConfig.WithHTTPClient(&http.Client{Transport: tr})
+        }
     }
 
     // Initialize a session in that the SDK will use to load credentials
-    sess, _ := session.NewSession(&aws.Config{
-        DisableSSL: aws.Bool(awsDisableSSL),
-        Region: aws.String(awsRegion)},
-    )
+    sess, _ := session.NewSession(awsConfig)
 
     downloader := s3manager.NewDownloader(sess)
 
