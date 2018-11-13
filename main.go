@@ -27,6 +27,7 @@ import (
     "encoding/hex"
     "io"
     "path/filepath"
+    "strconv"
 )
 
 // Downloads an item from an S3 Bucket in the region configured in the shared config
@@ -87,8 +88,14 @@ func main() {
        awsRegion = os.Getenv("AWS_REGION")
     }
 
+    awsDisableSSL := false
+    if os.Getenv("AWS_DISABLE_SSL") != "" {
+        awsDisableSSL, _ = strconv.ParseBool(os.Getenv("AWS_DISABLE_SSL"))
+    }
+
     // Initialize a session in that the SDK will use to load credentials
     sess, _ := session.NewSession(&aws.Config{
+        DisableSSL: aws.Bool(awsDisableSSL),
         Region: aws.String(awsRegion)},
     )
 
