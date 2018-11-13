@@ -98,9 +98,17 @@ func main() {
     if os.Getenv("AWS_NO_VERIFY_SSL") != "" {
         awsNoVerifySSL, _ := strconv.ParseBool(os.Getenv("AWS_NO_VERIFY_SSL"))
         if awsNoVerifySSL {
-            acceptAllCerts := &tls.Config{InsecureSkipVerify: true}
-            tr := &http.Transport{TLSClientConfig: acceptAllCerts}
-            awsConfig.WithHTTPClient(&http.Client{Transport: tr})
+            defaultTransport := http.DefaultTransport.(*http.Transport)
+            httpClientWithSelfSignedTLS := &http.Transport{
+              Proxy:                 defaultTransport.Proxy,
+              DialContext:           defaultTransport.DialContext,
+              MaxIdleConns:          defaultTransport.MaxIdleConns,
+              IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+              ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+              TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+              TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+            }
+            awsConfig.WithHTTPClient(&http.Client{Transport: httpClientWithSelfSignedTLS})
         }
     }
 
