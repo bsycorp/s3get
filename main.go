@@ -73,12 +73,23 @@ func main() {
         }
     }
 
-    // open files for writing
-    fileTmp, err := os.Create(itemTmp)
-    if err != nil {
-        exitErrorf("Unable to open file %q, %v", err)
+    var fileTmp *os.File = nil
+    var err error = nil
+    logging := true
+
+    if os.Args[len(os.Args) - 1] == "-" {
+        //should write download file to stdout instead of disk
+        fileTmp = os.Stdout
+        logging = false
+
+    } else {
+        // open files for writing
+        fileTmp, err = os.Create(itemTmp)
+        if err != nil {
+            exitErrorf("Unable to open file %q, %v", err)
+        }
+        defer fileTmp.Close()
     }
-    defer fileTmp.Close()
 
     awsRegion := "ap-southeast-2"
     if os.Getenv("AWS_REGION") != "" {
@@ -126,8 +137,10 @@ func main() {
         exitErrorf("Failed to move file: %s", outputItem)
     }
 
-    fmt.Println("Downloaded: ", filePath, numBytes, "bytes")
-    
+    if logging {
+        fmt.Println("Downloaded: ", filePath, numBytes, "bytes")
+    }
+
     //downloaded, if have has, check hash
     if itemExpectedHash != "" {
         fileHash := ""
@@ -150,7 +163,9 @@ func main() {
         }
         
         if fileHash == itemExpectedHash {
-            fmt.Println("Downloaded hash is correct: ", fileHash)
+            if logging {
+                fmt.Println("Downloaded hash is correct: ", fileHash)
+            }
         } else {
             exitErrorf("Downloaded file hash failed: %s", fileHash)
         }
@@ -161,7 +176,10 @@ func main() {
     if err != nil {
         exitErrorf("Failed to move file: %s to %s", tmpFilePath, filePath)
     }
-    fmt.Println("Complete: ", filePath)
+
+    if logging {
+        fmt.Println("Complete: ", filePath)
+    }
 }
 
 func exitErrorf(msg string, args ...interface{}) {
