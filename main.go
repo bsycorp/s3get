@@ -45,7 +45,7 @@ func main() {
 
     bucket := os.Args[1]
     item := os.Args[2]
-    
+
     outputItem := filepath.Base(item)
     itemTmp := outputItem + ".unconfirmed"
     itemExpectedHash := ""
@@ -74,16 +74,11 @@ func main() {
     }
 
     // open files for writing
-    file, err := os.Create(outputItem)
-    if err != nil {
-        exitErrorf("Unable to open file %q, %v", err)
-    }
     fileTmp, err := os.Create(itemTmp)
     if err != nil {
         exitErrorf("Unable to open file %q, %v", err)
     }
-
-    defer file.Close()
+    defer fileTmp.Close()
 
     awsRegion := "ap-southeast-2"
     if os.Getenv("AWS_REGION") != "" {
@@ -122,7 +117,16 @@ func main() {
         exitErrorf("Unable to download item %q, %v", item, err)
     }
 
-    fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
+    tmpFilePath, err := filepath.Abs(itemTmp)
+    if err != nil {
+        exitErrorf("Failed to move file: %s", itemTmp)
+    }
+    filePath, err := filepath.Abs(outputItem)
+    if err != nil {
+        exitErrorf("Failed to move file: %s", outputItem)
+    }
+
+    fmt.Println("Downloaded: ", filePath, numBytes, "bytes")
     
     //downloaded, if have has, check hash
     if itemExpectedHash != "" {
@@ -153,14 +157,6 @@ func main() {
     }
     
     //move confirmed file
-    tmpFilePath, err := filepath.Abs(itemTmp)
-    if err != nil {
-        exitErrorf("Failed to move file: %s", itemTmp)
-    }
-    filePath, err := filepath.Abs(outputItem)
-    if err != nil {
-        exitErrorf("Failed to move file: %s", outputItem)
-    }
     err = os.Rename(tmpFilePath, filePath)
     if err != nil {
         exitErrorf("Failed to move file: %s to %s", tmpFilePath, filePath)
